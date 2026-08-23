@@ -4,7 +4,7 @@ import numpy as np
 import threading
 import uvicorn
 
-from hand_analyizer import analyze_frame
+from hand_analyizer import analyze_frame, HAND_CONNECTIONS
 
 app = FastAPI()
 
@@ -22,7 +22,7 @@ async def upload_frame(request: Request):
     frame = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
 
     if frame is None:
-        return {"x": None, "y": None, "found": False}
+        return {"found": False}
 
     result = analyze_frame(frame)
 
@@ -33,8 +33,35 @@ async def upload_frame(request: Request):
     return result
 
 
+def draw_hand(frame, result):
+    landmarks_px = result["landmarks_px"]
+
+    for start_idx, end_idx in HAND_CONNECTIONS:
+        cv2.line(
+            frame,
+            landmarks_px[start_idx],
+            landmarks_px[end_idx],
+            color=(0, 255, 0),  # BGR -> Grün
+            thickness=2,
+        )
+
+    for point in landmarks_px:
+        cv2.circle(frame, point, radius=4, color=(0, 0, 255), thickness=-1)
+
+    x_min, y_min, x_max, y_max = result["bbox"]
+    cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), color=(255, 0, 0), thickness=2)
+
+    angle_text = f"angle: {result['angle_deg']:.1f} deg"
+    roll_text = f"roll: {result['roll_deg']:.1f} deg"
+    cv2.putText(frame, angle_text, (x_min, y_min - 30),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+    cv2.putText(frame, roll_text, (x_min, y_min - 10),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+
+
 def display_loop():
     global latest_frame, latest_result
+
     while True:
         with frame_lock:
             frame = latest_frame.copy() if latest_frame is not None else None
@@ -42,13 +69,7 @@ def display_loop():
 
         if frame is not None:
             if result is not None and result.get("found"):
-                cv2.circle(
-                    frame,
-                    (result["x_px"], result["y_px"]),
-                    radius=10,
-                    color=(0, 0, 255),  # BGR -> Rot
-                    thickness=-1,       # gefüllt
-                )
+                draw_hand(frame, result)
 
             cv2.imshow("Empfangener Stream", frame)
 
@@ -60,7 +81,7 @@ def display_loop():
 
 if __name__ == "__main__":
     server_thread = threading.Thread(
-        target=lambda: uvicorn.run(app, host="0.0.0.0", port=8000),
+        target=lambda: uvicorn.run(app, host="192.168.178.88", port=8000),
         daemon=True
     )
     server_thread.start()
