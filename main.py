@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 import cv2
 import numpy as np
@@ -5,6 +7,11 @@ import threading
 import uvicorn
 
 from hand_analyizer import analyze_frame, HAND_CONNECTIONS
+
+load_dotenv()
+
+SERVER_HOST = os.getenv("SERVER_HOST", "0.0.0.0")
+SERVER_PORT = int(os.getenv("SERVER_PORT", "8000"))
 
 app = FastAPI()
 
@@ -81,7 +88,7 @@ def display_loop():
 
 if __name__ == "__main__":
     server_thread = threading.Thread(
-        target=lambda: uvicorn.run(app, host="192.168.178.88", port=8000),
+        target=lambda: uvicorn.run(app, host=SERVER_HOST, port=SERVER_PORT),
         daemon=True
     )
     server_thread.start()

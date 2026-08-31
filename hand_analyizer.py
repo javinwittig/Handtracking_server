@@ -1,14 +1,20 @@
 import math
+import os
 import cv2
 import mediapipe as mp
+from dotenv import load_dotenv
+
+load_dotenv()
 
 BaseOptions = mp.tasks.BaseOptions
 HandLandmarker = mp.tasks.vision.HandLandmarker
 HandLandmarkerOptions = mp.tasks.vision.HandLandmarkerOptions
 VisionRunningMode = mp.tasks.vision.RunningMode
 
+MODEL_PATH = os.getenv("MODEL_PATH", "hand_landmarker.task")
+
 options = HandLandmarkerOptions(
-    base_options=BaseOptions(model_asset_path='hand_landmarker.task'),
+    base_options=BaseOptions(model_asset_path=MODEL_PATH),
     running_mode=VisionRunningMode.IMAGE
 )
 landmarker = HandLandmarker.create_from_options(options)  # einmalig!
